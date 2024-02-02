@@ -1,0 +1,36 @@
+configfile: "config/config.yaml"
+SAMPLES = ["trbc"]
+SCTRIP_DIR=config["data_location"]
+
+print(config)
+
+rule check_copy_selected_bams:
+    input: expand("{sctrip_dir}/breakpointR-pipeline/{sample}/selected_bam/labels.tsv", sctrip_dir=SCTRIP_DIR, sample=SAMPLES)
+    output: expand("{sctrip_dir}/breakpointR-pipeline/{sample}/checks/check_copy_selected_bams.ok", sctrip_dir=SCTRIP_DIR, sample=SAMPLES)
+    log: expand("{sctrip_dir}/breakpointR-pipeline/logs/check_copy_selected_bams.log", sctrip_dir=SCTRIP_DIR)
+    shell:
+        """
+        workflow/scripts/check_copy_selected_bams.sh {input} > {log} 2>&1
+        if [ $? -eq 0 ]; then
+            touch {output}
+        else
+            echo "The script did not exit with code 0. It exited with code $?."
+        fi
+        """
+
+
+rule copy_selected_bams:
+    input: 
+        cell_list=expand("{sctrip_dir}/{sample}/cell_selection/labels.tsv", sctrip_dir=SCTRIP_DIR, sample=SAMPLES),
+        bam_dir=expand("{sctrip_dir}/{sample}/bam", sctrip_dir=SCTRIP_DIR, sample=SAMPLES)
+    output: 
+        selected_bam=directory(expand("{sctrip_dir}/breakpointR-pipeline/{sample}/selected_bam", sctrip_dir=SCTRIP_DIR, sample=SAMPLES)),
+        labels_tsv=expand("{sctrip_dir}/breakpointR-pipeline/{sample}/selected_bam/labels.tsv", sctrip_dir=SCTRIP_DIR, sample=SAMPLES),
+    log: expand("{sctrip_dir}/breakpointR-pipeline/logs/copy_selected_bams.log", sctrip_dir=SCTRIP_DIR)
+    shell: 
+        "workflow/scripts/copy_selected_bams.sh {input.cell_list} {input.bam_dir} {output.selected_bam} > {log} 2>&1"
+
+
+
+# rule plot_breaks_on_counts_plot:
+#     input: expand("{sctrip_dir}/breakpointR-pipeline/{sample}/selected_bam/{cell}.bam", sctrip_dir=SCTRIP_DIR, sample=SAMPLES)
