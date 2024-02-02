@@ -1,8 +1,11 @@
+import os
+
 configfile: "config/config.yaml"
-SAMPLES = ["trbc"]
 SCTRIP_DIR=config["data_location"]
+SAMPLES = [str(x).split("/")[-1] for x in Path(SCTRIP_DIR).iterdir() if x.is_dir() and str(x).split("/")[-1] not in ["log", "config", "breakpointR-pipeline"]]
 
 print(config)
+print(f"samples: {SAMPLES}")
 
 rule check_copy_selected_bams:
     input: expand("{sctrip_dir}/breakpointR-pipeline/{sample}/selected_bam/labels.tsv", sctrip_dir=SCTRIP_DIR, sample=SAMPLES)
@@ -14,7 +17,7 @@ rule check_copy_selected_bams:
         if [ $? -eq 0 ]; then
             touch {output}
         else
-            echo "The script did not exit with code 0. It exited with code $?."
+            exit 1
         fi
         """
 
@@ -30,6 +33,10 @@ rule copy_selected_bams:
     shell: 
         "workflow/scripts/copy_selected_bams.sh {input.cell_list} {input.bam_dir} {output.selected_bam} > {log} 2>&1"
 
+
+# rule run_breakpointR:
+#     input: 
+#         selected_bam=directory(expand("{sctrip_dir}/breakpointR-pipeline/{sample}/selected_bam", sctrip_dir=SCTRIP_DIR, sample=SAMPLES)),
 
 
 # rule plot_breaks_on_counts_plot:
